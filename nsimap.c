@@ -349,7 +349,8 @@ Ns_ModuleInit(char *server, char *module)
 #ifdef SSL
     ssl_onceonlyinit ();
 #endif
-
+    // UW Imap sends USR2
+    ns_signal(SIGUSR2,SIG_IGN);
     path = Ns_ConfigGetPath(server,module,NULL);
     serverPtr = ns_calloc(1,sizeof(mailServer));
     serverPtr->server = server;
@@ -798,9 +799,8 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
     }
     case cmdStripHtml: {
         char *data;
-        static char *tags[] = { "BODY", "FRAME", "FRAMESET", "STYLE",
-                                "HEAD", "TITLE", "META", "DIV", "OBJECT",
-                                "EMBED", "BASE", 0 };
+        static char *tags[] = { "BODY", "FRAME", "FRAMESET","HEAD", "TITLE",
+                                "META", "DIV", "OBJECT", "EMBED", "BASE", 0 };
         if(objc < 3) {
           Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," text ?tags?",0);
           return TCL_ERROR;
@@ -1087,7 +1087,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           Tcl_AppendResult(interp,"Invalid message number",0);
           return TCL_ERROR;
         }
-        if(objc > 4 && (i = tclOption(objc,objv,4,"-flags",0)))
+        if(objc > 4 && (i = tclOption(objc,objv,4,"-flags",0)) > 0)
           mailFlags(Tcl_GetStringFromObj(objv[i],0),&flags);
         text = mail_fetchtext_full(session->stream,msg,&len,(int)flags);
         if(session->error) {
