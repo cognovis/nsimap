@@ -612,7 +612,7 @@ static Tcl_Obj *mailStruct(BODY *body,MESSAGECACHE *cache,Tcl_Interp *interp,cha
       mailPair(interp,list,"size",0,cache->rfc822_size,arrayName);
       mailPair(interp,list,"internaldate.day",0,cache->day,arrayName);
       mailPair(interp,list,"internaldate.month",0,cache->month,arrayName);
-      mailPair(interp,list,"internaldate.year",0,cache->year,arrayName);
+      mailPair(interp,list,"internaldate.year",0,BASEYEAR+cache->year,arrayName);
       mailPair(interp,list,"internaldate.hours",0,cache->hours,arrayName);
       mailPair(interp,list,"internaldate.minutes",0,cache->minutes,arrayName);
       mailPair(interp,list,"internaldate.seconds",0,cache->seconds,arrayName);
