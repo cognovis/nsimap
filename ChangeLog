@@ -1,3 +1,7 @@
+2004-02-19 Vlad Seryakov  vlad@crystalballinc.com
+
+        * UID support added to all commands, thanks to Neophytos Demetriou
+
 2004-08-17 Neophytos Demetriou <k2pts@cytanet.com.cy>
 
         * Internal date added to message struct

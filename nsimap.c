@@ -1052,10 +1052,15 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           return TCL_ERROR;
         }
         if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
-        if(objc > 4 && (index = tclOption(objc,objv,4,"-flags",0)) > 0)
-          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
-        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
-          Tcl_AppendResult(interp,"Invalid sequence number",0);
+        if(objc > 4) {
+          if((index = tclOption(objc,objv,4,"-flags",0)) > 0)
+            mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        }
+        if(flags & FT_UID) {
+          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+        }
+        if(msg <= 0 || msg > session->stream->nmsgs) {
+          Tcl_AppendResult(interp,"Invalid message number",0);
           return TCL_ERROR;
         }
         if(mailHeaders(session,msg)) return TCL_ERROR;
@@ -1078,10 +1083,15 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           return TCL_ERROR;
         }
         if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
-        if(objc > 5 && (index = tclOption(objc,objv,5,"-flags",0)) > 0)
-          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
-        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
-          Tcl_AppendResult(interp,"Invalid sequence number",0);
+        if(objc > 5) {
+          if((index = tclOption(objc,objv,5,"-flags",0)) > 0)
+            mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        }
+        if(flags & FT_UID) {
+          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+        }
+        if(msg <= 0 || msg > session->stream->nmsgs) {
+          Tcl_AppendResult(interp,"Invalid message number",0);
           return TCL_ERROR;
         }
         if(mailHeaders(session,msg)) return TCL_ERROR;
@@ -1098,10 +1108,15 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           return TCL_ERROR;
         }
         if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
-        if(objc > 4 && (index = tclOption(objc,objv,4,"-flags",0)) > 0)
-          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
-        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
-          Tcl_AppendResult(interp,"Invalid sequence number",0);
+        if(objc > 4) {
+          if((index = tclOption(objc,objv,4,"-flags",0)) > 0)
+            mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        }
+        if(flags & FT_UID) {
+          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+        }
+        if(msg <= 0 || msg > session->stream->nmsgs) {
+          Tcl_AppendResult(interp,"Invalid message number",0);
           return TCL_ERROR;
         }
         text = mail_fetchtext_full(session->stream,msg,&len,(int)flags);
@@ -1124,23 +1139,24 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           return TCL_ERROR;
         }
         if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
-        if(objc > 5 && (index = tclOption(objc,objv,5,"-flags",0)) > 0)
-          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
-        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
-          Tcl_AppendResult(interp,"Invalid sequence number",0);
-          return TCL_ERROR;
-        }
         if(objc > 5) {
-          if((index = tclOption(objc,objv,5,"-decode",1)) > 0) {
+          if((index = tclOption(objc,objv,5,"-flags",0)) > 0)
+            mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+          if((index = tclOption(objc,objv,5,"-decode",1)) > 0)
             decode = 1;
-          } else
-          if((index = tclOption(objc,objv,5,"-return",1)) > 0) {
+          if((index = tclOption(objc,objv,5,"-return",1)) > 0)
             mode = 1;
-          } else
           if((index = tclOption(objc,objv,5,"-file",0)) > 0) {
             mode = 2;
             fname = Tcl_GetStringFromObj(objv[index],0);
           }
+        }
+        if(flags & FT_UID) {
+          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+        }
+        if(msg <= 0 || msg > session->stream->nmsgs) {
+          Tcl_AppendResult(interp,"Invalid message number",0);
+          return TCL_ERROR;
         }
         text = mail_fetchbody_full(session->stream,msg,Tcl_GetStringFromObj(objv[4],0),&len,(int)flags);
         if(text) body = mail_body(session->stream,msg,Tcl_GetStringFromObj(objv[4],0));
@@ -1200,15 +1216,18 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           return TCL_ERROR;
         }
         if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
-        if(objc > 5 && (index = tclOption(objc,objv,5,"-flags",0)) > 0)
-          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
-        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
-          Tcl_AppendResult(interp,"Invalid sequence number",0);
-          return TCL_ERROR;
-        }
         if(objc > 5) {
           if((index = tclOption(objc,objv,5,"-array",0)) > 0)
             array = Tcl_GetStringFromObj(objv[index],0);
+          if((index = tclOption(objc,objv,5,"-flags",0)) > 0)
+            mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        }
+        if(flags & FT_UID) {
+          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+        }
+        if(msg <= 0 || msg > session->stream->nmsgs) {
+          Tcl_AppendResult(interp,"Invalid message number",0);
+          return TCL_ERROR;
         }
         if((body = mail_body(session->stream,msg,Tcl_GetStringFromObj(objv[4],0))))
           Tcl_SetObjResult(interp,mailStruct(body,0,interp,array));
@@ -1223,16 +1242,19 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           return TCL_ERROR;
         }
         if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
-        if(objc > 4 && (index = tclOption(objc,objv,4,"-flags",0)) > 0)
-          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
-        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
-          Tcl_AppendResult(interp,"Invalid sequence number",0);
-          return TCL_ERROR;
-        }
         /* Check for optional flags or/and array name */
         if(objc > 4) {
           if((index = tclOption(objc,objv,4,"-array",0)) > 0)
             array = Tcl_GetStringFromObj(objv[index],0);
+          if((index = tclOption(objc,objv,4,"-flags",0)) > 0)
+            mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        }
+        if(flags & FT_UID) {
+          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+        }
+        if(msg <= 0 || msg > session->stream->nmsgs) {
+          Tcl_AppendResult(interp,"Invalid message number",0);
+          return TCL_ERROR;
         }
         if(!mail_fetchstructure_full(session->stream,msg,&body,(int)flags) || !body) {
           Tcl_AppendResult(interp,session->error,0);
