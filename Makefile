@@ -1,7 +1,3 @@
-
-# Location of the installation of AOLServer
-NSHOME   =  /usr/local/aolserver
-
 # SSL support, uncomment two lines below IMAP 
 # if c-client library compiled with SSL support
 SSL      = -DSSL=1
@@ -31,7 +27,11 @@ MODLIBS	 = $(IMAPLIBS) $(SSLLIBS)
 #
 CLEAN   += clean_bak
 
-include  $(NSHOME)/include/Makefile.module
+ifdef NSBUILD
+        include  ../include/Makefile.module
+else
+        include  /usr/local/aolserver/include/Makefile.module
+endif
 
 clean_bak:
 	rm -rf *~
