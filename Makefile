@@ -22,7 +22,7 @@ IMAPFLAGS  = -I/usr/include/imap
 # RedHat 8.x
 #IMAPLIBS   = /usr/lib/c-client.a -L/usr/kerberos/lib -lgssapi_krb5 -lpam
 # Mandrake 10.x
-IMAPLIBS   = /usr/lib/libc-client-nossl.a -lpam
+IMAPLIBS   = /usr/lib/libc-client.a -L/usr/kerberos/lib -lgssapi_krb5 -lpam
 
 #
 # Module name
