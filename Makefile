@@ -18,7 +18,7 @@ SSL      = -DSSL=1
 SSLLIBS  = -lcrypto -lssl
 
 # Location of the UW IMAP c-client library source for RH7.3 and up
-IMAPFLAGS  = -I/usr/include/imap
+IMAPFLAGS  = -I/usr/include/imap $(SSL)
 # RedHat 8.x
 #IMAPLIBS   = /usr/lib/c-client.a -L/usr/kerberos/lib -lgssapi_krb5 -lpam
 # Mandrake 10.x
