@@ -100,8 +100,8 @@ static const char *RCSID = "@(#) $Header$, compiled: " __DATE__ " " __TIME__;
  *    ns_imap check #s
  *      performs internal mailbox checking
  *
- *    ns_imap headers #s msgno ?-array name?
- *    ns_imap header #s msgno hdrname
+ *    ns_imap headers #s msgno ?-array name? ?-flags flags?
+ *    ns_imap header #s msgno hdrname ?-flags flags?
  *      fetches the complete, unfiltered RFC 822 format header of the specified
  *      message as a text string and returns it as a Tcl list in the form
  *      { name value name value ... } suitable for using array set command.
@@ -141,7 +141,7 @@ static const char *RCSID = "@(#) $Header$, compiled: " __DATE__ " " __TIME__;
  *      performs necessary base64/qprint decoding. Something similar
  *      to ns_return.
  *
- *    ns_imap struct #s msgno ?-flags flags?-array name?
+ *    ns_imap struct #s msgno ?-flags flags? -array name?
  *    ns_imap bodystruct #s msgno part ?-flags flags? ?-array name?
  *      fetches all the structured information
  *      (envelope, internal date, RFC 822 size, flags, and body structure) for
@@ -735,6 +735,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
     unsigned int num;
     mailSession *session;
     mailServer *server = arg;
+    unsigned long msg,flags = 0;
 
     enum commands {
         cmdGc, cmdSessions, cmdDecode, cmdEncode, cmdParseDate, cmdStripHtml,
@@ -1046,14 +1047,15 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
     case cmdHeaders: {
         // Read message headers
         char *array = 0;
-        unsigned long msg;
         if(objc < 4) {
-          Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s msgno ?-array name?",0);
+          Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s msgno ?-array name? ?-flags flags?",0);
           return TCL_ERROR;
         }
-        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK ||
-           msg <= 0 || msg > session->stream->nmsgs) {
-          Tcl_AppendResult(interp,"Invalid message number",0);
+        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
+        if(objc > 4 && (index = tclOption(objc,objv,4,"-flags",0)) > 0)
+          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
+          Tcl_AppendResult(interp,"Invalid sequence number",0);
           return TCL_ERROR;
         }
         if(mailHeaders(session,msg)) return TCL_ERROR;
@@ -1070,15 +1072,16 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
     }
     case cmdHeader: {
         // Returns specified header value
-        unsigned long msg;
         char *hdr;
         if(objc < 5) {
-          Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s msgno hdrname",0);
+          Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s msgno hdrname ?-flags flags?",0);
           return TCL_ERROR;
         }
-        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK ||
-           msg <= 0 || msg > session->stream->nmsgs) {
-          Tcl_AppendResult(interp,"Invalid message number",0);
+        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
+        if(objc > 5 && (index = tclOption(objc,objv,5,"-flags",0)) > 0)
+          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
+          Tcl_AppendResult(interp,"Invalid sequence number",0);
           return TCL_ERROR;
         }
         if(mailHeaders(session,msg)) return TCL_ERROR;
@@ -1089,18 +1092,18 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
     case cmdText: {
         // Read the message text
         char *text;
-        unsigned long msg,len,flags = 0;
+        unsigned long len;
         if(objc < 4) {
           Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s msgno ?-flags flags?",0);
           return TCL_ERROR;
         }
-        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK ||
-           msg <= 0 || msg > session->stream->nmsgs) {
-          Tcl_AppendResult(interp,"Invalid message number",0);
-          return TCL_ERROR;
-        }
+        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
         if(objc > 4 && (index = tclOption(objc,objv,4,"-flags",0)) > 0)
           mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
+          Tcl_AppendResult(interp,"Invalid sequence number",0);
+          return TCL_ERROR;
+        }
         text = mail_fetchtext_full(session->stream,msg,&len,(int)flags);
         if(session->error) {
           Tcl_AppendResult(interp,session->error,0);
@@ -1111,34 +1114,32 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
     }
     case cmdBody: {
         // Read the body part
-        int idx;
         BODY *body;
         PARAMETER *filename;
         char *text,*fname = 0,*data = 0;
-        unsigned long msg,len,flags = 0,decode = 0,mode = 0;
+        unsigned long len,decode = 0,mode = 0;
 
         if(objc < 5) {
           Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s msgno part ?-flags flags? ?-decode? ?-file name? ?-return?",0);
           return TCL_ERROR;
         }
-        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK ||
-           msg <= 0 || msg > session->stream->nmsgs) {
-          Tcl_AppendResult(interp,"Invalid message number",0);
+        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
+        if(objc > 5 && (index = tclOption(objc,objv,5,"-flags",0)) > 0)
+          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
+          Tcl_AppendResult(interp,"Invalid sequence number",0);
           return TCL_ERROR;
         }
         if(objc > 5) {
-          if((idx = tclOption(objc,objv,5,"-flags",0)) > 0) {
-            mailFlags(Tcl_GetStringFromObj(objv[idx],0),&flags);
-          } else
-          if((idx = tclOption(objc,objv,5,"-decode",1)) > 0) {
+          if((index = tclOption(objc,objv,5,"-decode",1)) > 0) {
             decode = 1;
           } else
-          if((idx = tclOption(objc,objv,5,"-return",1)) > 0) {
+          if((index = tclOption(objc,objv,5,"-return",1)) > 0) {
             mode = 1;
           } else
-          if((idx = tclOption(objc,objv,5,"-file",0)) > 0) {
+          if((index = tclOption(objc,objv,5,"-file",0)) > 0) {
             mode = 2;
-            fname = Tcl_GetStringFromObj(objv[idx],0);
+            fname = Tcl_GetStringFromObj(objv[index],0);
           }
         }
         text = mail_fetchbody_full(session->stream,msg,Tcl_GetStringFromObj(objv[4],0),&len,(int)flags);
@@ -1194,14 +1195,15 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         // Read the structure of a specified body section of a specific message
         BODY *body;
         char *array = 0;
-        unsigned long msg;
         if(objc < 5) {
-          Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s msgno part ?-array name?",0);
+          Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s msgno part ?-array name? ?-flags flags?",0);
           return TCL_ERROR;
         }
-        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK ||
-           msg <= 0 || msg > session->stream->nmsgs) {
-          Tcl_AppendResult(interp,"Invalid message number",0);
+        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
+        if(objc > 5 && (index = tclOption(objc,objv,5,"-flags",0)) > 0)
+          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
+          Tcl_AppendResult(interp,"Invalid sequence number",0);
           return TCL_ERROR;
         }
         if(objc > 5) {
@@ -1216,20 +1218,19 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         // Read the whole message
         BODY *body;
         char *array = 0;
-        unsigned long msg,flags = 0;
         if(objc < 4) {
           Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s msgno ?-flags flags? ?-array name?",0);
           return TCL_ERROR;
         }
-        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK ||
-           msg <= 0 || msg > session->stream->nmsgs) {
-          Tcl_AppendResult(interp,"Invalid message number",0);
+        if(Tcl_GetLongFromObj(interp,objv[3],&msg) != TCL_OK) return TCL_ERROR;
+        if(objc > 4 && (index = tclOption(objc,objv,4,"-flags",0)) > 0)
+          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+        if(!(flags & FT_UID) && (msg <= 0 || msg > session->stream->nmsgs)) {
+          Tcl_AppendResult(interp,"Invalid sequence number",0);
           return TCL_ERROR;
         }
         /* Check for optional flags or/and array name */
         if(objc > 4) {
-          if((index = tclOption(objc,objv,4,"-flags",0)) > 0)
-            mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
           if((index = tclOption(objc,objv,4,"-array",0)) > 0)
             array = Tcl_GetStringFromObj(objv[index],0);
         }
