@@ -1,5 +1,5 @@
 IMAP Module for AOLserver 3.x/4.x
-Release 3.2.2
+Release 3.2.3
 vlad@crystalballinc.com
 
 This is AOLserver module that implements IMAP4 interface.
@@ -194,6 +194,13 @@ Usage
              oss2:nscp 4> ns_imap list 1 {{localhost}} mail/*
              mail/ noselect mail/text {noinferiors unmarked}
              mail/private {noinferiors unmarked} mail/trash {noinferiors unmarked}
+ 
+      ns_imap search #s searchCriteria
+        performs mailbox search and returns found message ids. Supports
+        IMAP2 search criteria only.
+        Example:
+             ns_imap search 1 "FROM john"
+             ns_imap search 1 "SUBJECT Meeting"
  
       ns_imap subscribe #s mailbox
       ns_imap unsusbscribe #s mailbox

@@ -193,6 +193,13 @@ static const char *RCSID = "@(#) $Header$, compiled: " __DATE__ " " __TIME__;
  *           mail/ noselect mail/text {noinferiors unmarked}
  *           mail/private {noinferiors unmarked} mail/trash {noinferiors unmarked}
  *
+ *    ns_imap search #s searchCriteria
+ *      performs mailbox search and returns found message ids. Supports
+ *      IMAP2 search criteria only.
+ *      Example:
+ *           ns_imap search 1 "FROM john"
+ *           ns_imap search 1 "SUBJECT Meeting"
+ *
  *    ns_imap subscribe #s mailbox
  *    ns_imap unsusbscribe #s mailbox
  *      adds/removes the given name to/from the subscription list
@@ -259,7 +266,7 @@ static const char *RCSID = "@(#) $Header$, compiled: " __DATE__ " " __TIME__;
 #include "fs.h"
 #include <setjmp.h>
 
-#define VERSION  "3.2.2"
+#define VERSION  "3.2.3"
 
 typedef struct _mailSession {
    struct _mailSession *next,*prev;
@@ -742,7 +749,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         cmdGc, cmdSessions, cmdDecode, cmdEncode, cmdParseDate, cmdStripHtml,
         cmdOpen,
         cmdClose, cmdReopen, cmdStatus, cmdHeaders, cmdText, cmdBody, cmdError,
-        cmdExpunge, cmdAppend, cmdCopy, cmdMove, cmdPing,
+        cmdExpunge, cmdAppend, cmdCopy, cmdMove, cmdPing, cmdSearch,
         cmdCheck, cmdStruct, cmdMCreate, cmdMDelete, cmdMRename, cmdDelete,
         cmdUndelete, cmdSetFlags, cmdClearFlags, cmdList, cmdLsub, cmdSubscribe,
         cmdUnsubscribe, cmdNmsgs, cmdNrecent, cmdSort, cmdBodyStruct, cmdUid,
@@ -753,7 +760,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         "gc", "sessions", "decode", "encode", "parsedate", "striphtml",
         "open",
         "close", "reopen", "status", "headers", "text", "body", "error",
-        "expunge", "append", "copy", "move", "ping",
+        "expunge", "append", "copy", "move", "ping", "search",
         "check", "struct", "m_create", "m_delete", "m_rename", "delete",
         "undelete", "setflags", "clearflags", "list", "lsub", "subscribe",
         "unsubscribe", "n_msgs", "n_recent", "sort", "bodystruct", "uid",
@@ -1408,6 +1415,29 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           Tcl_SetObjResult(interp,session->list);
         }
         mail_free_searchpgm(&spg);
+        if(session->error) {
+          Tcl_AppendResult(interp,session->error,0);
+          return TCL_ERROR;
+        }
+        break;
+    }
+    case cmdSearch: {
+        // Search message headers
+	SEARCHPGM *crit = 0;
+        unsigned long id;
+        if(objc < 4) {
+          Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s criteria",0);
+          return TCL_ERROR;
+        }
+        if(!session->stream->nmsgs) break;
+        if(!(crit = mail_criteria(Tcl_GetString(objv[3])))) break;
+        if(mail_search_full(session->stream,0,crit,SE_FREE)) {
+          session->list = Tcl_NewListObj(0,0);
+          for(id = 1;id <= session->stream->nmsgs;id++)
+            if(mail_elt(session->stream,id)->searched)
+              Tcl_ListObjAppendElement(interp,session->list,Tcl_NewIntObj(id));
+          Tcl_SetObjResult(interp,session->list);
+        }
         if(session->error) {
           Tcl_AppendResult(interp,session->error,0);
           return TCL_ERROR;
