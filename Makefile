@@ -1,3 +1,16 @@
+ifdef INST
+  NSHOME ?= $(INST)
+else
+  ifdef NSBUILD
+    NSHOME=..
+  else
+    NSHOME=/usr/local/aolserver
+    ifneq ( $(shell [ -f $(NSHOME)/include/Makefile.module ] && echo ok), ok)
+      NSHOME ?= ../aolserver
+    endif
+  endif
+endif
+
 # SSL support, uncomment two lines below IMAP 
 # if c-client library compiled with SSL support
 SSL      = -DSSL=1
@@ -19,7 +32,7 @@ MOD      =  nsimap.so
 # Objects to build.
 #
 OBJS     = nsimap.o
-CFLAGS	 = -I$(NSHOME)/include $(IMAPFLAGS) -g
+CFLAGS	 = $(IMAPFLAGS) -g
 MODLIBS	 = $(IMAPLIBS) $(SSLLIBS)
 
 #
@@ -27,11 +40,7 @@ MODLIBS	 = $(IMAPLIBS) $(SSLLIBS)
 #
 CLEAN   += clean_bak
 
-ifdef NSBUILD
-        include  ../include/Makefile.module
-else
-        include  /usr/local/aolserver/include/Makefile.module
-endif
+include  $(NSHOME)/include/Makefile.module
 
 clean_bak:
 	rm -rf *~
