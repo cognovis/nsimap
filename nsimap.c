@@ -699,11 +699,10 @@ static void mailGc(mailServer *server)
     Ns_MutexUnlock(&server->mailMutex);
 }
 
-int tclOption(int objc,Tcl_Obj *CONST objv[],int start,char *name,int single)
+int tclOption(int objc,Tcl_Obj *CONST objv[],int i,char *name,int single)
 {
-   int i ;
-   for(i = start;i < objc;i++) {
-     if(!strcmp(name,Tcl_GetStringFromObj(objv[i],0)))
+   for(;i < objc;i++) {
+     if(!strcmp(name,Tcl_GetString(objv[i])))
        return single ? i : i+1 < objc ? i+1 : -1;
    }
    return -1;
@@ -1094,9 +1093,10 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
     }
     case cmdBody: {
         // Read the body part
+        int idx;
         BODY *body;
         PARAMETER *filename;
-        char *text,*fname,*data = 0;
+        char *text,*fname = 0,*data = 0;
         unsigned long msg,len,flags = 0,decode = 0,mode = 0;
 
         if(objc < 5) {
@@ -1109,14 +1109,19 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           return TCL_ERROR;
         }
         if(objc > 5) {
-          if((i = tclOption(objc,objv,5,"-flags",0)) > 0)
-            mailFlags(Tcl_GetStringFromObj(objv[i],0),&flags);
-          if((i = tclOption(objc,objv,5,"-decode",1)) > 0)
+          if((idx = tclOption(objc,objv,5,"-flags",0)) > 0) {
+            mailFlags(Tcl_GetStringFromObj(objv[idx],0),&flags);
+          } else
+          if((idx = tclOption(objc,objv,5,"-decode",1)) > 0) {
             decode = 1;
-          if((i = tclOption(objc,objv,5,"-return",1)) > 0)
+          } else
+          if((idx = tclOption(objc,objv,5,"-return",1)) > 0) {
             mode = 1;
-          if((i = tclOption(objc,objv,5,"-file",0)) > 0)
-            mode = 2,fname = Tcl_GetStringFromObj(objv[i],0);
+          } else
+          if((idx = tclOption(objc,objv,5,"-file",0)) > 0) {
+            mode = 2;
+            fname = Tcl_GetStringFromObj(objv[idx],0);
+          }
         }
         text = mail_fetchbody_full(session->stream,msg,Tcl_GetStringFromObj(objv[4],0),&len,(int)flags);
         if(text) body = mail_body(session->stream,msg,Tcl_GetStringFromObj(objv[4],0));
@@ -1152,6 +1157,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
              break;
          }
          case 2:
+             Ns_Log(Debug,"nsimap: body: %s, %s",fname,filename?filename->value:0);
              if(*fname == 0 && filename) fname = filename->value;
              if((i = open(fname,O_WRONLY|O_CREAT|O_TRUNC,0644)) == -1) {
                Tcl_AppendResult(interp,"Unable to create file:",fname,", ",strerror(errno),0);
