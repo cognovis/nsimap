@@ -1194,12 +1194,12 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           Tcl_AppendResult(interp,"Invalid message number",0);
           return TCL_ERROR;
         }
-        body = mail_body(session->stream,msg,Tcl_GetStringFromObj(objv[4],0));
         if(objc > 5) {
           if((index = tclOption(objc,objv,5,"-array",0)) > 0)
             array = Tcl_GetStringFromObj(objv[index],0);
         }
-        Tcl_SetObjResult(interp,mailStruct(body,0,interp,array));
+        if((body = mail_body(session->stream,msg,Tcl_GetStringFromObj(objv[4],0))))
+          Tcl_SetObjResult(interp,mailStruct(body,0,interp,array));
         break;
     }
     case cmdStruct: {
