@@ -301,7 +301,6 @@ static char *strStripHtml(char *str,char *tags[]);
 static char *strLower(char *str);
 static void mailGc(mailServer *server);
 static void mm_parseline(ENVELOPE *env,char *hdr,char *data,char *host);
-static void mm_freeenvelope(void **ptr);
 void mm_getquota(MAILSTREAM *stream,char *qroot,QUOTALIST *qlist);
 
 static Ns_Tls mailTls;
@@ -418,7 +417,9 @@ static void freeSession(mailServer *server,mailSession *session,int lock)
     if(session == server->sessions) server->sessions = session->next;
     if(lock) Ns_MutexUnlock(&server->mailMutex);
     if(session->stream) {
+#ifdef LOCAL
       ((IMAPLOCAL *)session->stream->local)->byeseen = 1;
+#endif
       mail_close_full(session->stream,0);
     }
     Ns_SetFree(session->params);
@@ -535,14 +536,14 @@ static Tcl_Obj *mailEnvelope(ENVELOPE *en,Tcl_Interp *interp,char *arrayName)
 {
     Tcl_Obj *list = Tcl_NewListObj(0,0);
 
-    if(en->remail) mailPair(interp,list,"Remail",en->remail,0,arrayName);
-    if(en->date) mailPair(interp,list,"Date",en->date,0,arrayName);
-    if(en->subject) mailPair(interp,list,"Subject",en->subject,0,arrayName);
-    if(en->in_reply_to) mailPair(interp,list,"In-Reply-To",en->in_reply_to,0,arrayName);
-    if(en->message_id) mailPair(interp,list,"Message-Id",en->message_id,0,arrayName);
-    if(en->newsgroups) mailPair(interp,list,"Newsgroups",en->newsgroups,0,arrayName);
-    if(en->followup_to) mailPair(interp,list,"Followup-To",en->followup_to,0,arrayName);
-    if(en->references) mailPair(interp,list,"References",en->references,0,arrayName);
+    if(en->remail) mailPair(interp,list,"Remail",en->remail,(unsigned)0,arrayName);
+    if(en->date) mailPair(interp,list,"Date",en->date,(unsigned)0,arrayName);
+    if(en->subject) mailPair(interp,list,"Subject",en->subject,(unsigned)0,arrayName);
+    if(en->in_reply_to) mailPair(interp,list,"In-Reply-To",en->in_reply_to,(unsigned)0,arrayName);
+    if(en->message_id) mailPair(interp,list,"Message-Id",en->message_id,(unsigned)0,arrayName);
+    if(en->newsgroups) mailPair(interp,list,"Newsgroups",en->newsgroups,(unsigned)0,arrayName);
+    if(en->followup_to) mailPair(interp,list,"Followup-To",en->followup_to,(unsigned)0,arrayName);
+    if(en->references) mailPair(interp,list,"References",en->references,(unsigned)0,arrayName);
     if(en->to) mailAddress(interp,list,"To",en->to,arrayName);
     if(en->from) mailAddress(interp,list,"From",en->from,arrayName);
     if(en->cc) mailAddress(interp,list,"Cc",en->cc,arrayName);
@@ -609,16 +610,16 @@ static Tcl_Obj *mailStruct(BODY *body,MESSAGECACHE *cache,Tcl_Interp *interp,cha
       if(cache->draft) *p++ = 'X';
       *p = 0;
       mailPair(interp,list,"flags",buf,0,arrayName);
-      mailPair(interp,list,"size",0,cache->rfc822_size,arrayName);
-      mailPair(interp,list,"internaldate.day",0,cache->day,arrayName);
-      mailPair(interp,list,"internaldate.month",0,cache->month,arrayName);
-      mailPair(interp,list,"internaldate.year",0,BASEYEAR+cache->year,arrayName);
-      mailPair(interp,list,"internaldate.hours",0,cache->hours,arrayName);
-      mailPair(interp,list,"internaldate.minutes",0,cache->minutes,arrayName);
-      mailPair(interp,list,"internaldate.seconds",0,cache->seconds,arrayName);
-      mailPair(interp,list,"internaldate.zoccident",0,cache->zoccident,arrayName);
-      mailPair(interp,list,"internaldate.zhours",0,cache->zhours,arrayName);
-      mailPair(interp,list,"internaldate.zminutes",0,cache->zminutes,arrayName);
+      mailPair(interp,list,"size",0,(unsigned long)cache->rfc822_size,arrayName);
+      mailPair(interp,list,"internaldate.day",0,(unsigned long)cache->day,arrayName);
+      mailPair(interp,list,"internaldate.month",0,(unsigned long)cache->month,arrayName);
+      mailPair(interp,list,"internaldate.year",0,(unsigned long)(BASEYEAR+cache->year),arrayName);
+      mailPair(interp,list,"internaldate.hours",0,(unsigned long)cache->hours,arrayName);
+      mailPair(interp,list,"internaldate.minutes",0,(unsigned long)cache->minutes,arrayName);
+      mailPair(interp,list,"internaldate.seconds",0,(unsigned long)cache->seconds,arrayName);
+      mailPair(interp,list,"internaldate.zoccident",0,(unsigned long)cache->zoccident,arrayName);
+      mailPair(interp,list,"internaldate.zhours",0,(unsigned long)cache->zhours,arrayName);
+      mailPair(interp,list,"internaldate.zminutes",0,(unsigned long)cache->zminutes,arrayName);
     }
     mailPair(interp,list,"type",(char*)mailType(body->type),0,arrayName);
     switch(body->encoding) {
@@ -733,7 +734,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
 {
     int index;
     unsigned int num;
-    mailSession *session;
+    mailSession *session = 0;
     mailServer *server = arg;
     unsigned long msg,flags = 0;
 
@@ -1057,7 +1058,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
             mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
         }
         if(flags & FT_UID) {
-          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+          if((msg = mail_msgno(session->stream,msg))) flags &= ~FT_UID;
         }
         if(msg <= 0 || msg > session->stream->nmsgs) {
           Tcl_AppendResult(interp,"Invalid message number",0);
@@ -1088,7 +1089,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
             mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
         }
         if(flags & FT_UID) {
-          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+          if((msg = mail_msgno(session->stream,msg))) flags &= ~FT_UID;
         }
         if(msg <= 0 || msg > session->stream->nmsgs) {
           Tcl_AppendResult(interp,"Invalid message number",0);
@@ -1113,7 +1114,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
             mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
         }
         if(flags & FT_UID) {
-          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+          if((msg = mail_msgno(session->stream,msg))) flags &= ~FT_UID;
         }
         if(msg <= 0 || msg > session->stream->nmsgs) {
           Tcl_AppendResult(interp,"Invalid message number",0);
@@ -1129,7 +1130,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
     }
     case cmdBody: {
         // Read the body part
-        BODY *body;
+        BODY *body = 0;
         PARAMETER *filename;
         char *text,*fname = 0,*data = 0;
         unsigned long len,decode = 0,mode = 0;
@@ -1152,7 +1153,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           }
         }
         if(flags & FT_UID) {
-          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+          if((msg = mail_msgno(session->stream,msg))) flags &= ~FT_UID;
         }
         if(msg <= 0 || msg > session->stream->nmsgs) {
           Tcl_AppendResult(interp,"Invalid message number",0);
@@ -1223,7 +1224,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
             mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
         }
         if(flags & FT_UID) {
-          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+          if((msg = mail_msgno(session->stream,msg))) flags &= ~FT_UID;
         }
         if(msg <= 0 || msg > session->stream->nmsgs) {
           Tcl_AppendResult(interp,"Invalid message number",0);
@@ -1250,7 +1251,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
             mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
         }
         if(flags & FT_UID) {
-          if(msg = mail_msgno(session->stream,msg)) flags &= ~FT_UID;
+          if((msg = mail_msgno(session->stream,msg))) flags &= ~FT_UID;
         }
         if(msg <= 0 || msg > session->stream->nmsgs) {
           Tcl_AppendResult(interp,"Invalid message number",0);
@@ -1754,7 +1755,7 @@ static char *utf7_decode(char *in,int inlen,int *outlen)
     /* enforce end state */
     if(state != ST_NORMAL) return 0;
     /* allocate output buffer */
-    if((out = ns_malloc((*outlen) + 1)) == NULL) return 0;
+    if((out = ns_malloc((unsigned)(*outlen) + 1)) == NULL) return 0;
     /* decode input string */
     outp = out;
     state = ST_NORMAL;
@@ -1829,7 +1830,7 @@ static char *utf7_encode(char *in,int inlen,int *outlen)
       }
     }
     /* allocate output buffer */
-    if((out = ns_malloc((*outlen) + 1)) == NULL) return 0;
+    if((out = ns_malloc((unsigned)(*outlen) + 1)) == NULL) return 0;
     /* encode input string */
     outp = out;
     state = ST_NORMAL;
