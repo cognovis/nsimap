@@ -1,5 +1,5 @@
 IMAP Module for AOLserver 3.x/4.x
-Release 3.1
+Release 3.2
 vlad@crystalballinc.com
 
 This is AOLserver module that implements IMAP4 interface.

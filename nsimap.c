@@ -259,7 +259,7 @@ static const char *RCSID = "@(#) $Header$, compiled: " __DATE__ " " __TIME__;
 #include "fs.h"
 #include <setjmp.h>
 
-#define VERSION  "3.1"
+#define VERSION  "3.2"
 
 typedef struct _mailSession {
    struct _mailSession *next,*prev;
@@ -416,7 +416,10 @@ static void freeSession(mailServer *server,mailSession *session,int lock)
     if(session->next) session->next->prev = session->prev;
     if(session == server->sessions) server->sessions = session->next;
     if(lock) Ns_MutexUnlock(&server->mailMutex);
-    if(session->stream) mail_close_full(session->stream,0);
+    if(session->stream) {
+      ((IMAPLOCAL *)session->stream->local)->byeseen = 1;
+      mail_close_full(session->stream,0);
+    }
     Ns_SetFree(session->params);
     Ns_SetFree(session->headers);
     ns_free(session->error);
@@ -690,6 +693,9 @@ static void mailGc(mailServer *server)
       if(now - session->access_time > idle_timeout) {
         mailSession *next = session->next;
         Ns_Log(Notice,"ns_imap: GC: inactive session %d: %s",session->id,session->stream->mailbox);
+        Ns_TlsSet(&mailTls,session);
+        /* In case of panic we will be thrown here again */
+        if(setjmp(session->jmp)) continue;
         freeSession(server,session,0);
         session = next;
         continue;

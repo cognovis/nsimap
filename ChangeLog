@@ -1,3 +1,7 @@
+2003-06-06 Vlad Seryakov  vlad@crystalballinc.com
+
+        * Stream close crash fixed, some minor changes
+
 2003-05-19 Vlad Seryakov  vlad@crystalballinc.com
 
         * File return fixes in ns_imap body command
