@@ -1,3 +1,7 @@
+2004-08-17 Neophytos Demetriou <k2pts@cytanet.com.cy>
+
+        * Internal date added to message struct
+
 2004-02-11 Vlad Seryakov  vlad@crystalballinc.com
 
         * Signed/unsigned integer index corrcted

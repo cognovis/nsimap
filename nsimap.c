@@ -259,7 +259,7 @@ static const char *RCSID = "@(#) $Header$, compiled: " __DATE__ " " __TIME__;
 #include "fs.h"
 #include <setjmp.h>
 
-#define VERSION  "3.2.1"
+#define VERSION  "3.2.2"
 
 typedef struct _mailSession {
    struct _mailSession *next,*prev;
@@ -610,6 +610,15 @@ static Tcl_Obj *mailStruct(BODY *body,MESSAGECACHE *cache,Tcl_Interp *interp,cha
       *p = 0;
       mailPair(interp,list,"flags",buf,0,arrayName);
       mailPair(interp,list,"size",0,cache->rfc822_size,arrayName);
+      mailPair(interp,list,"internaldate.day",0,cache->day,arrayName);
+      mailPair(interp,list,"internaldate.month",0,cache->month,arrayName);
+      mailPair(interp,list,"internaldate.year",0,cache->year,arrayName);
+      mailPair(interp,list,"internaldate.hours",0,cache->hours,arrayName);
+      mailPair(interp,list,"internaldate.minutes",0,cache->minutes,arrayName);
+      mailPair(interp,list,"internaldate.seconds",0,cache->seconds,arrayName);
+      mailPair(interp,list,"internaldate.zoccident",0,cache->zoccident,arrayName);
+      mailPair(interp,list,"internaldate.zhours",0,cache->zhours,arrayName);
+      mailPair(interp,list,"internaldate.zminutes",0,cache->zminutes,arrayName);
     }
     mailPair(interp,list,"type",(char*)mailType(body->type),0,arrayName);
     switch(body->encoding) {
@@ -1023,6 +1032,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         break;
     case cmdPing:
         // Check if the stream is still active
+        if(!session->stream) break;
         Tcl_SetObjResult(interp,Tcl_NewIntObj(mail_ping(session->stream)));
         break;
     case cmdCheck:
