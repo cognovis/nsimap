@@ -425,7 +425,8 @@ static void freeSession(mailServer *server,mailSession *session,int lock)
     if(lock) Ns_MutexUnlock(&server->mailMutex);
     if(session->stream) {
 #ifdef LOCAL
-      ((IMAPLOCAL *)session->stream->local)->byeseen = 1;
+      if(session->stream->dtb && !strcmp(session->stream->dtb->name,"imap"))
+        ((IMAPLOCAL *)session->stream->local)->byeseen = 1;
 #endif
       mail_close_full(session->stream,0);
     }
@@ -824,7 +825,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," text ?tags?",0);
           return TCL_ERROR;
         }
-        data = strStripHtml(Tcl_GetStringFromObj(objv[2],0),tags);
+        data = strStripHtml(Tcl_GetString(objv[2]),tags);
         Tcl_SetResult(interp,data,(Tcl_FreeProc*)ns_free);
     }
     case cmdParseDate: {
