@@ -259,7 +259,7 @@ static const char *RCSID = "@(#) $Header$, compiled: " __DATE__ " " __TIME__;
 #include "fs.h"
 #include <setjmp.h>
 
-#define VERSION  "3.2"
+#define VERSION  "3.2.1"
 
 typedef struct _mailSession {
    struct _mailSession *next,*prev;
@@ -722,7 +722,8 @@ int tclOption(int objc,Tcl_Obj *CONST objv[],int i,char *name,int single)
 static int
 MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
 {
-    unsigned int i;
+    int index;
+    unsigned int num;
     mailSession *session;
     mailServer *server = arg;
 
@@ -761,8 +762,8 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         Tcl_AppendResult(interp, "wrong # args: should be ns_imap command #s ?args ...?",0);
         return TCL_ERROR;
       }
-      if(Tcl_GetIntFromObj(interp,objv[2],&i) != TCL_OK) return TCL_ERROR;
-      if(!(session = getSession(server,i))) {
+      if(Tcl_GetIntFromObj(interp,objv[2],&num) != TCL_OK) return TCL_ERROR;
+      if(!(session = getSession(server,num))) {
         Tcl_AppendResult(interp,"Invalid or expired mail session",0);
         return TCL_ERROR;
       }
@@ -842,21 +843,21 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         data = (char *)Tcl_GetByteArrayFromObj(objv[3],(int*)&len);
         // Decode BASE64 encoded text */
         if(!strcmp(Tcl_GetStringFromObj(objv[2],0),"base64")) {
-          data = (char *)rfc822_base64(data,i=len,&len);
+          data = (char *)rfc822_base64(data,num=len,&len);
           Tcl_SetObjResult(interp,Tcl_NewByteArrayObj(data,(int)len));
           fs_give((void**)&data);
           return TCL_OK;
         } else
         // Convert a quoted-printable string to an 8-bit string */
         if(!strcmp(Tcl_GetStringFromObj(objv[2],0),"qprint")) {
-          data = (char *)rfc822_qprint(data,i=len,&len);
+          data = (char *)rfc822_qprint(data,num=len,&len);
           Tcl_SetObjResult(interp,Tcl_NewByteArrayObj(data,(int)len));
           fs_give((void**)&data);
           return TCL_OK;
         } else
         // Convert a UTF7 an 8-bit string */
         if(!strcmp(Tcl_GetStringFromObj(objv[2],0),"utf7")) {
-          if((data = utf7_decode(data,(int)i=len,(int*)&len))) {
+          if((data = utf7_decode(data,(int)num=len,(int*)&len))) {
             Tcl_SetObjResult(interp,Tcl_NewByteArrayObj(data,(int)len));
             ns_free(data);
             return TCL_OK;
@@ -876,21 +877,21 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         data = (char *)Tcl_GetByteArrayFromObj(objv[3],(int*)&len);
         // Convert an 8bit string to a quoted printable string */
         if(!strcmp(Tcl_GetStringFromObj(objv[2],0),"qprint")) {
-          data = (char *)rfc822_8bit(data,i=len,&len);
+          data = (char *)rfc822_8bit(data,num=len,&len);
           Tcl_SetObjResult(interp,Tcl_NewStringObj(data,(int)len));
           fs_give((void**)&data);
           return TCL_OK;
         } else
         // Convert an 8bit string to a base64 string */
         if(!strcmp(Tcl_GetStringFromObj(objv[2],0),"base64")) {
-          data = (char *)rfc822_binary(data,i=len,&len);
+          data = (char *)rfc822_binary(data,num=len,&len);
           Tcl_SetObjResult(interp,Tcl_NewStringObj(data,(int)len));
           fs_give((void**)&data);
           return TCL_OK;
         } else
         // Convert a 8-bit string into UTF7 */
         if(!strcmp(Tcl_GetStringFromObj(objv[2],0),"utf7")) {
-          if((data = utf7_encode(data,(int)i=len,(int*)&len))) {
+          if((data = utf7_encode(data,(int)num=len,(int*)&len))) {
             Tcl_SetObjResult(interp,Tcl_NewStringObj(data,(int)len));
             ns_free(data);
             return TCL_OK;
@@ -967,8 +968,8 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           return TCL_ERROR;
         }
         if(!session->params) session->params = Ns_SetCreate("params");
-        if((i = Ns_SetFind(session->params,Tcl_GetStringFromObj(objv[3],0))) > -1)
-          Ns_SetPutValue(session->params,(int)i,Tcl_GetStringFromObj(objv[4],0));
+        if((index = Ns_SetFind(session->params,Tcl_GetStringFromObj(objv[3],0))) > -1)
+          Ns_SetPutValue(session->params,index,Tcl_GetStringFromObj(objv[4],0));
         else
           Ns_SetPut(session->params,Tcl_GetStringFromObj(objv[3],0),Tcl_GetStringFromObj(objv[4],0));
         break;
@@ -1047,12 +1048,13 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         }
         if(mailHeaders(session,msg)) return TCL_ERROR;
         if(objc > 4) {
-          if((i = tclOption(objc,objv,4,"-array",0)) > 0)
-            array = Tcl_GetStringFromObj(objv[i],0);
+          if((index = tclOption(objc,objv,4,"-array",0)) > 0)
+            array = Tcl_GetStringFromObj(objv[index],0);
         }
         session->list = Tcl_NewListObj(0,0);
-        for(i = 0;i < Ns_SetSize(session->headers);i++)
-          mailPair(interp,session->list,Ns_SetKey(session->headers,i),Ns_SetValue(session->headers,i),0,array);
+        for(num = 0;num < Ns_SetSize(session->headers);num++)
+          mailPair(interp,session->list,Ns_SetKey(session->headers,num),
+                                        Ns_SetValue(session->headers,num),0,array);
         Tcl_SetObjResult(interp,session->list);
         break;
     }
@@ -1087,8 +1089,8 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           Tcl_AppendResult(interp,"Invalid message number",0);
           return TCL_ERROR;
         }
-        if(objc > 4 && (i = tclOption(objc,objv,4,"-flags",0)) > 0)
-          mailFlags(Tcl_GetStringFromObj(objv[i],0),&flags);
+        if(objc > 4 && (index = tclOption(objc,objv,4,"-flags",0)) > 0)
+          mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
         text = mail_fetchtext_full(session->stream,msg,&len,(int)flags);
         if(session->error) {
           Tcl_AppendResult(interp,session->error,0);
@@ -1138,10 +1140,10 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         if(decode || mode) {
           switch(body->encoding) {
            case ENCBASE64:
-               text = data = (char *)rfc822_base64(text,i=len,&len);
+               text = data = (char *)rfc822_base64(text,num=len,&len);
                break;
            case ENCQUOTEDPRINTABLE:
-               text = data = (char *)rfc822_qprint(text,i=len,&len);
+               text = data = (char *)rfc822_qprint(text,num=len,&len);
           }
         }
         // Discover attachement file name
@@ -1165,12 +1167,12 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
          case 2:
              Ns_Log(Debug,"nsimap: body: %s, %s",fname,filename?filename->value:0);
              if(*fname == 0 && filename) fname = filename->value;
-             if((i = open(fname,O_WRONLY|O_CREAT|O_TRUNC,0644)) == -1) {
+             if((index = open(fname,O_WRONLY|O_CREAT|O_TRUNC,0644)) == -1) {
                Tcl_AppendResult(interp,"Unable to create file:",fname,", ",strerror(errno),0);
                return TCL_ERROR;
              }
-             write((int)i,text,(int)len);
-             close((int)i);
+             write(index,text,(int)len);
+             close(index);
              break;
          default:
              Tcl_SetObjResult(interp,Tcl_NewByteArrayObj(text,(int)len));
@@ -1194,8 +1196,8 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         }
         body = mail_body(session->stream,msg,Tcl_GetStringFromObj(objv[4],0));
         if(objc > 5) {
-          if((i = tclOption(objc,objv,5,"-array",0)) > 0)
-            array = Tcl_GetStringFromObj(objv[i],0);
+          if((index = tclOption(objc,objv,5,"-array",0)) > 0)
+            array = Tcl_GetStringFromObj(objv[index],0);
         }
         Tcl_SetObjResult(interp,mailStruct(body,0,interp,array));
         break;
@@ -1216,10 +1218,10 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         }
         /* Check for optional flags or/and array name */
         if(objc > 4) {
-          if((i = tclOption(objc,objv,4,"-flags",0)) > 0)
-            mailFlags(Tcl_GetStringFromObj(objv[i],0),&flags);
-          if((i = tclOption(objc,objv,4,"-array",0)) > 0)
-            array = Tcl_GetStringFromObj(objv[i],0);
+          if((index = tclOption(objc,objv,4,"-flags",0)) > 0)
+            mailFlags(Tcl_GetStringFromObj(objv[index],0),&flags);
+          if((index = tclOption(objc,objv,4,"-array",0)) > 0)
+            array = Tcl_GetStringFromObj(objv[index],0);
         }
         if(!mail_fetchstructure_full(session->stream,msg,&body,(int)flags) || !body) {
           Tcl_AppendResult(interp,session->error,0);
@@ -1358,10 +1360,10 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           Tcl_AppendResult(interp, "wrong # args: should be ns_imap ",sCmd[cmd]," #s criteria reverse ?flags?",0);
           return TCL_ERROR;
         }
-        if(Tcl_GetIndexFromObj(interp,objv[3],sSort,"option",TCL_EXACT,&i) != TCL_OK) return TCL_ERROR;
+        if(Tcl_GetIndexFromObj(interp,objv[3],sSort,"option",TCL_EXACT,&num) != TCL_OK) return TCL_ERROR;
         memset(&pgm,0,sizeof(pgm));
-        pgm.function = iSort[i];
-        if(Tcl_GetIntFromObj(0,objv[4],&i) == TCL_OK) pgm.reverse = i ? 1 : 0;
+        pgm.function = iSort[num];
+        if(Tcl_GetIntFromObj(0,objv[4],&index) == TCL_OK) pgm.reverse = index ? 1 : 0;
         spg = mail_newsearchpgm();
         if(objc == 6) mailFlags(Tcl_GetStringFromObj(objv[5],0),&flags);
         if((ids = mail_sort(session->stream,0,spg,&pgm,flags))) {
@@ -1451,8 +1453,9 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
           mail_status(session->stream,session->stream->mailbox,flags);
         }
         if(strstr(status_flags,"USERFLAGS")) {
-          for(i = 0; i < NUSERFLAGS && session->stream->user_flags[i]; ++i)
-            Tcl_ListObjAppendElement(interp,session->list,Tcl_NewStringObj(session->stream->user_flags[i],-1));
+          for(num = 0; num < NUSERFLAGS && session->stream->user_flags[num]; ++num)
+            Tcl_ListObjAppendElement(interp,session->list,
+                      Tcl_NewStringObj(session->stream->user_flags[num],-1));
         }
         Tcl_SetObjResult(interp,session->list);
         break;

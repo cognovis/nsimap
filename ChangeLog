@@ -1,3 +1,7 @@
+2004-02-11 Vlad Seryakov  vlad@crystalballinc.com
+
+        * Signed/unsigned integer index corrcted
+
 2003-06-06 Vlad Seryakov  vlad@crystalballinc.com
 
         * Stream close crash fixed, some minor changes
