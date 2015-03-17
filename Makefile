@@ -18,11 +18,11 @@ SSL      = -DSSL=1
 SSLLIBS  = -lcrypto -lssl
 
 # Location of the UW IMAP c-client library source for RH7.3 and up
-IMAPFLAGS  = -I/usr/include/imap $(SSL)
+IMAPFLAGS  = -I/usr/include/imap -I/usr/include/c-client $(SSL)
 # RedHat 8.x
 #IMAPLIBS   = /usr/lib/c-client.a -L/usr/kerberos/lib -lgssapi_krb5 -lpam
 # Mandrake 10.x
-IMAPLIBS   = /usr/lib/libc-client.a -L/usr/kerberos/lib -lgssapi_krb5 -lpam
+IMAPLIBS   = -lc-client -L/usr/kerberos/lib -lgssapi_krb5 -lpam
 
 #
 # Module name
@@ -33,7 +33,7 @@ MOD      =  nsimap.so
 # Objects to build.
 #
 OBJS     = nsimap.o
-CFLAGS	 = $(IMAPFLAGS) -g
+CFLAGS	 = -Wl,--no-as-needed $(IMAPFLAGS) -g
 MODLIBS	 = $(IMAPLIBS) $(SSLLIBS)
 
 #
@@ -41,8 +41,8 @@ MODLIBS	 = $(IMAPLIBS) $(SSLLIBS)
 #
 CLEAN   += clean_bak
 
-include  $(NSHOME)/include/Makefile.module
-
+#include  /usr/share/aolserver4/Makefile.module
+include  /usr/local/src/aolserver/include/Makefile.module
 clean_bak:
 	rm -rf *~
 

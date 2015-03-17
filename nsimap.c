@@ -23,7 +23,7 @@
  * version of this file under either the License or the GPL.
  */
 
-static const char *RCSID = "@(#) $Header$, compiled: " __DATE__ " " __TIME__;
+static const char *RCSID = "@(#) $Header: /cvsroot/aolserver/nsimap/nsimap.c,v 1.13 2004/10/13 21:21:36 seryakov Exp $, compiled: " __DATE__ " " __TIME__;
 
 /*
  * nsimap.c -- Interface to c-client Mail library
@@ -876,7 +876,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         } else
         // Convert a UTF7 an 8-bit string */
         if(!strcmp(Tcl_GetStringFromObj(objv[2],0),"utf7")) {
-          if((data = utf7_decode(data,(int)num=len,(int*)&len))) {
+          if((data = utf7_decode(data,num=len,(int*)&len))) {
             Tcl_SetObjResult(interp,Tcl_NewByteArrayObj(data,(int)len));
             ns_free(data);
             return TCL_OK;
@@ -910,7 +910,7 @@ MailCmd(ClientData arg,Tcl_Interp *interp,int objc,Tcl_Obj *CONST objv[])
         } else
         // Convert a 8-bit string into UTF7 */
         if(!strcmp(Tcl_GetStringFromObj(objv[2],0),"utf7")) {
-          if((data = utf7_encode(data,(int)num=len,(int*)&len))) {
+          if((data = utf7_encode(data,num=len,(int*)&len))) {
             Tcl_SetObjResult(interp,Tcl_NewStringObj(data,(int)len));
             ns_free(data);
             return TCL_OK;

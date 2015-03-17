@@ -1,0 +1,60 @@
+aolserver4-nsimap (3.2.3-4build1) lucid; urgency=low
+
+  * No-change rebuild for libc-client2007b -> libc-client2007e
+    transition.
+
+ -- Ilya Barygin <barygin@gmail.com>  Sat, 27 Mar 2010 10:40:05 +0300
+
+aolserver4-nsimap (3.2.3-4) unstable; urgency=low
+
+  [ Stefan Sobernig ]
+  * Checked lintian sanity (v2.2.12)
+  * Added an explicit lintian override to avoid the
+    'possible-gpl-code-linked-with-openssl' warning due to GPL status
+    of the source package
+  * Bumping policy to 3.8.2
+  * Setting source package's licene to GPLv2 explicitly
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Tue, 30 Jun 2009 01:36:34 +0200
+
+aolserver4-nsimap (3.2.3-3) unstable; urgency=low
+
+  [ Francesco Paolo Lovergine ]
+  * Now using substvar file provided by aolserver4-dev >= 4.5.1-5
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Tue, 23 Jun 2009 14:46:27 +0200
+
+aolserver4-nsimap (3.2.3-2) unstable; urgency=low
+
+  * Policy bumped to 3.8.1.
+  * New depedency on AOLserver versioned API+ABI interface introduced.
+  * Debhelper level set to 7.
+  * Now using provided Makefile to be coherent with the whole building system.
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Wed, 17 Jun 2009 10:33:33 +0200
+
+aolserver4-nsimap (3.2.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * Modified to work with aolserver4 4.5.0
+  * Policy bumped to 3.7.2
+  * Debhelper compatibility moved to 5.
+  * Patched sources to avoid invalid lvalue assignments.
+  * Updated maintainer email.
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Mon, 23 Mar 2009 23:12:23 +0100
+
+aolserver4-nsimap (3.1-2) unstable; urgency=low
+
+  * Linking a static library is a non-sense. Dunno why it has been overseen before.
+  * SSL enabled with -DSSL in debian.mk.
+    (closes: #257287)
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Fri,  9 Jul 2004 16:12:25 +0200
+
+aolserver4-nsimap (3.1-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Francesco Paolo Lovergine <frankie@debian.org>  Wed,  9 Jun 2004 22:43:51 +0200
+
