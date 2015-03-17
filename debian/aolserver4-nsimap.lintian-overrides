@@ -1,4 +1,0 @@
-# the suspected openssl-gpl conflict is due to
-# the source package being licensed under gpl.
-# therefore, we provide an explicit override
-aolserver4-nsimap binary: possible-gpl-code-linked-with-openssl
